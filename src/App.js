@@ -1,7 +1,7 @@
 import styled from '@emotion/styled'
 import { ThemeProvider } from '@emotion/react'
 import { useState } from 'react'
-
+import dayjs from 'dayjs'
 
 import { ReactComponent as DayCloudyIcon } from './images/day-cloudy.svg'
 import { ReactComponent as AirFlowIcon } from './images/airFlow.svg'
@@ -124,33 +124,70 @@ const theme = {
   }
 }
 
-
+const AUTHORIZATION_KEY = 'CWB-6F9A08E3-0806-4406-A992-F157B05FE585'
+const LOCATION_NAME = '臺北'
 
 function App() {
   const [currentTheme, setCurrentTheme] = useState('light')
 
+  const [currentWeather, setCurrentWeather] = useState({
+    locationName: '臺北市',
+    description: '多雲時晴',
+    windSpeed: 1.1,
+    temperature: 22.9,
+    rainPossibility: 48.3,
+    observationTime: '2020-12-12 22:10:00'
+  })
+
+  const handleClick = () => {
+    fetch(`https://opendata.cwb.gov.tw/api/v1/rest/datastore/O-A0003-001?Authorization=${AUTHORIZATION_KEY}&locationName=${LOCATION_NAME}`)
+      .then(response => response.json())
+      .then(data => {
+        const locationData = data.records.location[0]
+
+        const weatherElements = locationData.weatherElement.reduce(
+          (neededElements, item) => {
+            if (['WDSD', 'TEMP'].includes(item.elementName)) {
+              neededElements[item.elementName] = item.elementValue
+            }
+            return neededElements
+          }, {}
+        )
+
+        console.log('weatherElements', weatherElements)
+      })
+      .catch(error => console.log('error', error))
+  }
 
 
   return (
     <ThemeProvider theme={theme[currentTheme]}>
       <Container>
         <WeatherCard>
-          <Location>台北市</Location>
-          <Description>多雲時晴</Description>
+          <Location>{currentWeather.locationName}</Location>
+          <Description>{currentWeather.description}</Description>
           <CurrentWeather>
             <Temperature>
               <DayCloudy />
-            23 <Celsius>°C</Celsius>
+              {Math.round(currentWeather.temperature)} <Celsius>°C</Celsius>
             </Temperature>
           </CurrentWeather>
           <AirFlow>
-            <AirFlowIcon /> 23 m/h
+            <AirFlowIcon /> {currentWeather.windSpeed} m/h
         </AirFlow>
           <Rain>
             <RainIcon />
-          48%
+            {currentWeather.rainPossibility}%
         </Rain>
-          <Refresh> 最後觀測時間：上午 12:03 <RefreshIcon /></Refresh>
+          <Refresh onClick={handleClick}> 最後觀測時間：
+            {new Intl.DateTimeFormat('zh-TW', {
+            hour: 'numeric',
+            minute: 'numeric'
+          })
+              .format(dayjs(currentWeather.observationTime))
+            }
+
+            {currentWeather.observationTime} <RefreshIcon /></Refresh>
         </WeatherCard>
       </Container>
     </ThemeProvider>
