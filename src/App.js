@@ -1,6 +1,6 @@
 import styled from '@emotion/styled'
 import { ThemeProvider } from '@emotion/react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import dayjs from 'dayjs'
 
 import { ReactComponent as DayCloudyIcon } from './images/day-cloudy.svg'
@@ -139,11 +139,12 @@ function App() {
     observationTime: '2020-12-12 22:10:00'
   })
 
-  const handleClick = () => {
+  const fetchCurrentWeather = () => {
     fetch(`https://opendata.cwb.gov.tw/api/v1/rest/datastore/O-A0003-001?Authorization=${AUTHORIZATION_KEY}&locationName=${LOCATION_NAME}`)
       .then(response => response.json())
       .then(data => {
         const locationData = data.records.location[0]
+        console.log('location data', locationData)
 
         const weatherElements = locationData.weatherElement.reduce(
           (neededElements, item) => {
@@ -155,10 +156,23 @@ function App() {
         )
 
         console.log('weatherElements', weatherElements)
+
+        setCurrentWeather({
+          observationTime: locationData.time.obsTime,
+          locationName: locationData.locationName,
+          temperature: weatherElements.TEMP,
+          windSpeed: weatherElements.WDSD,
+          description: '多雲時晴',
+          rainPossibility: 60,
+        })
       })
       .catch(error => console.log('error', error))
   }
 
+  useEffect(() => {
+    console.log('use effect')
+    fetchCurrentWeather()
+  }, [])
 
   return (
     <ThemeProvider theme={theme[currentTheme]}>
@@ -179,7 +193,7 @@ function App() {
             <RainIcon />
             {currentWeather.rainPossibility}%
         </Rain>
-          <Refresh onClick={handleClick}> 最後觀測時間：
+          <Refresh onClick={fetchCurrentWeather}> 最後觀測時間：
             {new Intl.DateTimeFormat('zh-TW', {
             hour: 'numeric',
             minute: 'numeric'
