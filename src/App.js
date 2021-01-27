@@ -1,6 +1,6 @@
 import styled from '@emotion/styled'
 import { ThemeProvider } from '@emotion/react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import dayjs from 'dayjs'
 
 import { ReactComponent as DayCloudyIcon } from './images/day-cloudy.svg'
@@ -210,7 +210,7 @@ function App() {
     isLoading: true
   })
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setWeatherElement((prevState) => ({
       ...prevState,
       isLoading: true,
@@ -226,10 +226,10 @@ function App() {
       ...weatherForecast,
       isLoading: false
     })
-  }
+  }, [])
 
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => { fetchData() }, [fetchData])
 
 
   const {
