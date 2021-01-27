@@ -140,6 +140,61 @@ const AUTHORIZATION_KEY = 'CWB-6F9A08E3-0806-4406-A992-F157B05FE585'
 const LOCATION_NAME = '臺北'
 const LOCATION_NAME_FORECAST = '臺北市'
 
+const fetchCurrentWeather = () => {
+  return fetch(`https://opendata.cwb.gov.tw/api/v1/rest/datastore/O-A0003-001?Authorization=${AUTHORIZATION_KEY}&locationName=${LOCATION_NAME}`)
+    .then(response => response.json())
+    .then(data => {
+      const locationData = data.records.location[0]
+      console.log('location data', locationData)
+
+      const weatherElements = locationData.weatherElement.reduce(
+        (neededElements, item) => {
+          if (['WDSD', 'TEMP'].includes(item.elementName)) {
+            neededElements[item.elementName] = item.elementValue
+          }
+          return neededElements
+        }, {}
+      )
+
+      console.log('weatherElements', weatherElements)
+
+      return {
+        observationTime: locationData.time.obsTime,
+        locationName: locationData.locationName,
+        temperature: weatherElements.TEMP,
+        windSpeed: weatherElements.WDSD,
+      }
+    })
+    .catch(error => console.log('error', error))
+}
+
+const fetchWeatherForecast = () => {
+  return fetch(`https://opendata.cwb.gov.tw/api/v1/rest/datastore/F-C0032-001?Authorization=${AUTHORIZATION_KEY}&locationName=${LOCATION_NAME_FORECAST}`)
+    .then(response => response.json())
+    .then(data => {
+      const locationData = data.records.location[0]
+
+      console.log('another set of location data', locationData)
+
+      const weatherElements = locationData.weatherElement.reduce((neededElements, item) => {
+        if (['Wx', 'PoP', 'CI'].includes(item.elementName)) {
+          neededElements[item.elementName] = item.time[0].parameter
+        }
+        return neededElements
+      }, {})
+
+
+      return {
+        description: weatherElements.Wx.parameterName,
+        weatherCode: weatherElements.Wx.parameterValue,
+        rainPossibility: weatherElements.PoP.parameterName,
+        comfortability: weatherElements.CI.parameterName,
+      };
+    })
+    .catch(error => console.log('error', error))
+}
+
+
 function App() {
   const [currentTheme, setCurrentTheme] = useState('light')
 
@@ -155,76 +210,26 @@ function App() {
     isLoading: true
   })
 
-  const fetchCurrentWeather = () => {
-
-    setWeatherElement(prevState => ({
+  const fetchData = async () => {
+    setWeatherElement((prevState) => ({
       ...prevState,
-      isLoading: true
-    }))
+      isLoading: true,
+    }));
 
-    fetch(`https://opendata.cwb.gov.tw/api/v1/rest/datastore/O-A0003-001?Authorization=${AUTHORIZATION_KEY}&locationName=${LOCATION_NAME}`)
-      .then(response => response.json())
-      .then(data => {
-        const locationData = data.records.location[0]
-        console.log('location data', locationData)
+    const [currentWeather, weatherForecast] = await Promise.all([
+      fetchCurrentWeather(),
+      fetchWeatherForecast()
+    ])
 
-        const weatherElements = locationData.weatherElement.reduce(
-          (neededElements, item) => {
-            if (['WDSD', 'TEMP'].includes(item.elementName)) {
-              neededElements[item.elementName] = item.elementValue
-            }
-            return neededElements
-          }, {}
-        )
-
-        console.log('weatherElements', weatherElements)
-
-        setWeatherElement(prevState => ({
-          ...prevState,
-          observationTime: locationData.time.obsTime,
-          locationName: locationData.locationName,
-          temperature: weatherElements.TEMP,
-          windSpeed: weatherElements.WDSD,
-          isLoading: false
-        }))
-      })
-      .catch(error => console.log('error', error))
-  }
-
-  const fetchWeatherForecast = () => {
-    fetch(`https://opendata.cwb.gov.tw/api/v1/rest/datastore/F-C0032-001?Authorization=${AUTHORIZATION_KEY}&locationName=${LOCATION_NAME_FORECAST}`)
-      .then(response => response.json())
-      .then(data => {
-        const locationData = data.records.location[0]
-
-        console.log('another set of location data', locationData)
-
-        const weatherElements = locationData.weatherElement.reduce((neededElements, item) => {
-          if (['Wx', 'PoP', 'CI'].includes(item.elementName)) {
-            neededElements[item.elementName] = item.time[0].parameter
-          }
-          return neededElements
-        }, {})
-
-
-        setWeatherElement(prevState => ({
-          ...prevState,
-          description: weatherElements.Wx.parameterName,
-          weatherCode: weatherElements.Wx.parameterValue,
-          rainPossibility: weatherElements.PoP.parameterName,
-          comfortability: weatherElements.CI.parameterName
-        }))
-      })
-      .catch(error => console.log('error', error))
+    setWeatherElement({
+      ...currentWeather,
+      ...weatherForecast,
+      isLoading: false
+    })
   }
 
 
-  useEffect(() => {
-    console.log('use effect')
-    fetchCurrentWeather()
-    fetchWeatherForecast()
-  }, [])
-
+  useEffect(() => { fetchData() }, [])
 
 
   const {
@@ -257,10 +262,7 @@ function App() {
             <RainIcon />
             {rainPossibility}%
         </Rain>
-          <Refresh onClick={() => {
-            fetchCurrentWeather()
-            fetchWeatherForecast()
-          }} isLoading={isLoading}> 最後觀測時間：
+          <Refresh onClick={fetchData} isLoading={isLoading}> 最後觀測時間：
             {new Intl.DateTimeFormat('zh-TW', {
             hour: 'numeric',
             minute: 'numeric'
@@ -271,7 +273,7 @@ function App() {
           </Refresh>
         </WeatherCard>
       </Container>
-    </ThemeProvider>
+    </ThemeProvider >
   );
 }
 
