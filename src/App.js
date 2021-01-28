@@ -1,14 +1,13 @@
 import styled from '@emotion/styled'
 import { ThemeProvider } from '@emotion/react'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import dayjs from 'dayjs'
-
+import { getMoment } from './utils/helpers.js'
 
 import { ReactComponent as AirFlowIcon } from './images/airFlow.svg'
 import { ReactComponent as RainIcon } from './images/rain.svg'
 import { ReactComponent as RefreshIcon } from './images/refresh.svg'
 import { ReactComponent as LoadingIcon } from './images/loading.svg'
-
 import WeatherIcon from './components/WeatherIcon.js'
 
 const Container = styled.div`
@@ -196,7 +195,7 @@ const fetchWeatherForecast = () => {
 
 function App() {
   const [currentTheme, setCurrentTheme] = useState('light')
-
+  const moment = useMemo(() => getMoment(LOCATION_NAME_FORECAST), [])
   const [weatherElement, setWeatherElement] = useState({
     observationTime: new Date(),
     locationName: '',
@@ -227,9 +226,10 @@ function App() {
     })
   }, [])
 
-
   useEffect(() => { fetchData() }, [fetchData])
-
+  useEffect(() => {
+    setCurrentTheme(moment === 'day' ? 'light' : 'dark')
+  }, [moment])
 
   const {
     observationTime,
@@ -253,7 +253,7 @@ function App() {
             <Temperature>
               {Math.round(temperature)} <Celsius>°C</Celsius>
             </Temperature>
-            <WeatherIcon weatherCode={weatherCode} moment='night' />
+            <WeatherIcon weatherCode={weatherCode} moment={moment} />
           </CurrentWeather>
           <AirFlow>
             <AirFlowIcon /> {windSpeed} m/h
